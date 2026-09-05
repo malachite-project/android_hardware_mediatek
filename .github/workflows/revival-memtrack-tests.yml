@@ -1,0 +1,22 @@
+name: ION accounting contracts
+
+on:
+  push:
+    branches: [revival/memtrack-validated-rows]
+  pull_request:
+    branches: [lineage-23.2]
+    paths: [aidl/memtrack/**, tests/test_memtrack_ion.py, .github/workflows/revival-memtrack-tests.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  native-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Compile and run production-method contracts with ASan and UBSan
+        run: python3 -m unittest discover -s tests -p 'test_memtrack_ion.py' -v
