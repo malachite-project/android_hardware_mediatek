@@ -9,6 +9,8 @@
 
 #include <unistd.h>
 #include <fstream>
+#include <limits>
+#include <sstream>
 
 namespace aidl {
 namespace android {
@@ -20,6 +22,7 @@ bool MemtrackDeviceMali::getMemory(int pid, MemtrackRecord& record) {
     std::string line, client_name;
     unsigned int client_pid;
     int64_t client_size;
+    const int64_t page_size = getpagesize();
 
     if (!ifs.is_open()) {
         return false;
@@ -28,11 +31,19 @@ bool MemtrackDeviceMali::getMemory(int pid, MemtrackRecord& record) {
     while (std::getline(ifs, line)) {
         std::istringstream iss(line);
 
-        if (iss >> client_name >> client_size >> client_pid) {
+        if ((iss >> client_name >> client_size >> client_pid) && client_size >= 0) {
             if (client_pid == pid || pid == 0) {
-                LOG(DEBUG) << "Accounting memory allocated by PID " << pid << ": "
-                           << client_size * getpagesize();
-                record.sizeInBytes += client_size * getpagesize();
+                if (client_size > std::numeric_limits<int64_t>::max() / page_size) {
+                    LOG(ERROR) << "Mali allocation size exceeds the memtrack byte range";
+                    return false;
+                }
+                const int64_t bytes = client_size * page_size;
+                if (record.sizeInBytes > std::numeric_limits<int64_t>::max() - bytes) {
+                    LOG(ERROR) << "Mali allocation total exceeds the memtrack byte range";
+                    return false;
+                }
+                LOG(DEBUG) << "Accounting memory allocated by PID " << pid << ": " << bytes;
+                record.sizeInBytes += bytes;
             }
         }
     }
