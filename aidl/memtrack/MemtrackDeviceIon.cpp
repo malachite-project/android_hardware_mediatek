@@ -8,6 +8,8 @@
 #include <android-base/logging.h>
 
 #include <fstream>
+#include <limits>
+#include <sstream>
 
 namespace aidl {
 namespace android {
@@ -26,9 +28,15 @@ bool MemtrackDeviceIon::getMemory(int pid, MemtrackRecord& record) {
 
     while (std::getline(ifs, line)) {
         std::istringstream iss(line);
-        iss >> client_name >> client_pid >> client_size;
+        // Headers, blank lines and partial rows must not reuse the last PID/size.
+        if (!(iss >> client_name >> client_pid >> client_size) || client_size < 0) {
+            continue;
+        }
 
-        if (client_pid == pid) {
+        if (client_pid == static_cast<unsigned int>(pid)) {
+            if (client_size > std::numeric_limits<int64_t>::max() - record.sizeInBytes) {
+                return false;
+            }
             LOG(DEBUG) << "Accounting memory allocated by PID " << pid << ": " << client_size;
             record.sizeInBytes += client_size;
         }
