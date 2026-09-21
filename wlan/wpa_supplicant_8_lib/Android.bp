@@ -9,7 +9,19 @@ cc_library_static {
     sanitize: {
         cfi: true,
     },
-    cflags: ["-DCONFIG_MTK_P2P_SIGMA"],
+    // This library dereferences wpa_supplicant's private structures
+    // (struct wpa_supplicant, wpa_global, wpa_ssid), whose layout depends on
+    // CONFIG_* flags. Compile it with the flags of the wpa_supplicant binary it
+    // is linked into, or it reads fields at the wrong offsets.
+    defaults: ["wpa_supplicant_cflags_default"],
+    cflags: [
+        // Set by wpa_supplicant_usd_defaults, which also adds sources.
+        "-DCONFIG_NAN_USD",
+        "-DCONFIG_MTK_P2P_SIGMA",
+        // The shared defaults add -Werror; this imported code is not
+        // warning-clean against them.
+        "-Wno-error",
+    ],
     srcs: ["mediatek_driver_cmd_nl80211.c"],
     shared_libs: [
         "libc",
