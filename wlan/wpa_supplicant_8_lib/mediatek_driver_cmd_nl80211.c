@@ -887,13 +887,15 @@ static int p2p_ctrl_iface_set_sleep(struct wpa_supplicant* wpa_s, char* cmd, cha
  * argv[4] = "3"
  */
 
-int tokenize_space(char* cmd, char* argv[], int len) {
+static int tokenize_space(char* cmd, char* argv[], int max_args, int len) {
     char* pos;
     char* start;
     int argc = 0;
 
     start = pos = cmd;
     for (;;) {
+        /* Reject commands with more tokens than the caller's array holds. */
+        if (argc >= max_args) return -1;
         argv[argc] = pos;
         argc++;
         while (*pos != '\n' && *pos != ' ' && *pos != '\0') {
@@ -936,7 +938,7 @@ static int p2p_ctrl_iface_set_noa(struct wpa_supplicant* wpa_s, char* cmd, char*
      * argv[2] = "100"
      * argv[3] = "3"
      */
-    argc = tokenize_space(cmd, argv, os_strlen(cmd));
+    argc = tokenize_space(cmd, argv, ARRAY_SIZE(argv), os_strlen(cmd));
 
     if (argc != 4) {
         wpa_printf(MSG_DEBUG, "P2P: NOA: invalid cmd format");
@@ -977,7 +979,7 @@ static int p2p_ctrl_iface_set_ps(struct wpa_supplicant* wpa_s, char* cmd, char* 
      * argv[2] = "1"
      * argv[3] = "3"
      */
-    argc = tokenize_space(cmd, argv, os_strlen(cmd));
+    argc = tokenize_space(cmd, argv, ARRAY_SIZE(argv), os_strlen(cmd));
 
     if (argc != 4) {
         wpa_printf(MSG_DEBUG, "P2P: Opps: invalid cmd format");
