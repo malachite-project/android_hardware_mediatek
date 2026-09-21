@@ -4,6 +4,7 @@
  */
 
 #include "includes.h"
+#include <sys/ioctl.h>
 #include "netlink/genl/genl.h"
 
 #include "common.h"
