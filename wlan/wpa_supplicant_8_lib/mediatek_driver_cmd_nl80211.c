@@ -1294,13 +1294,19 @@ int wpa_driver_nl80211_driver_cmd(void* priv, char* cmd_src, char* buf, size_t b
             wpa_driver_send_hang_msg(drv);
             ret = snprintf(buf, buf_len, "%s\n", "FAIL");
         } else {
+            /* The driver fills priv_cmd.buf; it may not be terminated,
+             * and buf may be smaller than it. */
+            priv_cmd.buf[PRIV_CMD_SIZE - 1] = '\0';
             wpa_printf(MSG_INFO, "%s: ret = %d used = %u total = %u buf = %s", __func__, ret,
                        priv_cmd.used_len, priv_cmd.total_len, priv_cmd.buf);
 
             drv_errors = 0;
             str_len = strlen(priv_cmd.buf);
-            memcpy(buf, priv_cmd.buf, str_len + 1);
-            ret = strlen(buf);
+            if (buf_len == 0) return 0;
+            if ((size_t)str_len >= buf_len) str_len = buf_len - 1;
+            memcpy(buf, priv_cmd.buf, str_len);
+            buf[str_len] = '\0';
+            ret = str_len;
 
             if ((os_strncasecmp(cmd, "WLS_BATCHING", 12) == 0)) {
                 buf[buf_len - 1] = '\0';
