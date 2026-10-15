@@ -20,6 +20,8 @@
 #include <android-base/logging.h>
 #include <minijail.h>
 
+#include <thread>
+
 #include <util/C2InterfaceHelper.h>
 #include <C2Component.h>
 #include <C2Config.h>
@@ -211,13 +213,15 @@ void runAidlService() {
     ABinderProcess_joinThreadPool();
 }
 
-void runHidlService() {
+void runHidlService(bool withAidl) {
     using namespace ::android;
 
-    // Enable vndbinder to allow vendor-to-vendor binder calls.
-    ProcessState::initWithDriver("/dev/vndbinder");
-
-    ProcessState::self()->startThreadPool();
+    if (!withAidl) {
+        // Enable vndbinder to allow vendor-to-vendor binder calls. With the
+        // AIDL service in this process, libbinder is already on /dev/binder.
+        ProcessState::initWithDriver("/dev/vndbinder");
+        ProcessState::self()->startThreadPool();
+    }
     hardware::configureRpcThreadpool(kThreadCount, true /* callerWillJoin */);
 
     // Create IComponentStore service.
@@ -256,9 +260,14 @@ int main(int /* argc */, char** /* argv */) {
     signal(SIGPIPE, SIG_IGN);
     android::SetUpMinijail(kBaseSeccompPolicyPath, kExtSeccompPolicyPath);
     if (aidlEnabled) {
+        // The framework uses the AIDL store, but vendor clients of the HIDL
+        // "default" store, which the VINTF fragment declares either way, still
+        // need it: Dolby's Dolby Vision decoder (c2.dolby.client) gets the
+        // hardware HEVC decoder from IComponentStore@1.0/default.
+        std::thread([] { runHidlService(true /* withAidl */); }).detach();
         runAidlService();
     } else {
-        runHidlService();
+        runHidlService(false /* withAidl */);
     }
     return 0;
 }
