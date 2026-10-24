@@ -12,3 +12,9 @@ cc_library_shared {
     srcs: ["aee.c"],
     shared_libs: ["liblog"],
 }
+
+cc_library_shared {
+    name: "libladder",
+    vendor: true,
+    srcs: ["libladder.cpp"],
+}
