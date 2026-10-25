@@ -3,7 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-cc_binary {
+soong_config_module_type {
+    name: "mediatek_wlan_assistant_cc_binary",
+    module_type: "cc_binary",
+    config_namespace: "mediatek_wlan",
+    bool_variables: ["use_vendor_wlan_assistant"],
+    properties: ["enabled"],
+}
+
+mediatek_wlan_assistant_cc_binary {
     name: "wlan_assistant",
     srcs: ["main.cpp"],
     shared_libs: [
@@ -14,4 +22,12 @@ cc_binary {
 
     vendor: true,
     init_rc: ["wlan_assistant.rc"],
+
+    // Devices that ship their vendor's own wlan_assistant set
+    // mediatek_wlan use_vendor_wlan_assistant.
+    soong_config_variables: {
+        use_vendor_wlan_assistant: {
+            enabled: false,
+        },
+    },
 }
