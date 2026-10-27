@@ -13,10 +13,14 @@ cc_library_static {
     // (struct wpa_supplicant, wpa_global, wpa_ssid), whose layout depends on
     // CONFIG_* flags. Compile it with the flags of the wpa_supplicant binary it
     // is linked into, or it reads fields at the wrong offsets.
-    defaults: ["wpa_supplicant_cflags_default"],
+    // wpa_supplicant_usd_defaults: CONFIG_NAN_USD, and since Android 17 also
+    // CONFIG_NAN, which adds fields to struct wpa_supplicant and the nl80211
+    // driver structs.
+    defaults: [
+        "wpa_supplicant_cflags_default",
+        "wpa_supplicant_usd_defaults",
+    ],
     cflags: [
-        // Set by wpa_supplicant_usd_defaults, which also adds sources.
-        "-DCONFIG_NAN_USD",
         "-DCONFIG_MTK_P2P_SIGMA",
         // The shared defaults add -Werror; this imported code is not
         // warning-clean against them.
