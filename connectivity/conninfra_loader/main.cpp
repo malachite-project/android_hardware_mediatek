@@ -21,7 +21,6 @@
 #include <string>
 #include <thread>
 
-using android::base::GetProperty;
 using android::base::SetProperty;
 using android::base::StringPrintf;
 using android::base::unique_fd;
@@ -50,7 +49,6 @@ constexpr std::array<Radio, 4> kRadios{{
         {"GPS", "vendor.connsys.gps.adie.chipid"},
         {"FM", "vendor.connsys.fm.adie.chipid"},
 }};
-constexpr size_t kGpsIndex = 2;
 
 // The driver returns the ID as the ioctl return value; <= 0 means failure.
 int QueryId(int fd, unsigned long request, unsigned long arg = 0) {
@@ -80,10 +78,13 @@ unique_fd OpenConninfra() {
     }
 }
 
-void DoModuleInit(int fd) {
-    if (int ret = ioctl(fd, CONNINFRA_IOCTL_DO_MODULE_INIT, 0); ret != 0) {
-        PLOG(ERROR) << "Kernel module init failed, ret=" << ret;
+bool DoModuleInit(int fd) {
+    const int ret = ioctl(fd, CONNINFRA_IOCTL_DO_MODULE_INIT, 0);
+    if (ret != 0) {
+        LOG(ERROR) << "Kernel module init failed, ret=" << ret;
+        return false;
     }
+    return true;
 }
 
 void SetChipId(int fd) {
@@ -107,24 +108,21 @@ void SetAdieChipIds(int fd) {
     }
 }
 
-void SetDriverReady() {
-    if (GetProperty(kDriverReadyProp, "") == "yes") {
-        LOG(INFO) << kDriverReadyProp << " was already set";
-    }
-    if (!SetProperty(kDriverReadyProp, "yes")) {
-        LOG(ERROR) << "Failed to set " << kDriverReadyProp;
-    }
-}
-
 }  // namespace
 
 int main() {
     unique_fd fd = OpenConninfra();
 
-    DoModuleInit(fd.get());
+    if (!DoModuleInit(fd.get())) {
+        return EXIT_FAILURE;
+    }
+
     SetChipId(fd.get());
     SetAdieChipIds(fd.get());
-    SetDriverReady();
+
+    if (!SetProperty(kDriverReadyProp, "yes")) {
+        LOG(ERROR) << "Failed to set " << kDriverReadyProp;
+    }
 
     return EXIT_SUCCESS;
 }
